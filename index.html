@@ -30,9 +30,15 @@
                     Width: <input type="number" id="customWidth" value="8" min="1" max="84">
                 </label>
                 <label>
-                    Height: <input type="number" id="customHeight" value="6" min="1" max="48">
+                    Height: <input type="number" id="customHeight" value="8" min="1" max="48">
                 </label>
                 <button id="applyCustomSize">Apply Size</button>
+                
+                <h3 style="margin-top: 15px;">Auto-Render Character</h3>
+                <label>
+                    Character: <input type="text" id="charInput" maxlength="1" placeholder="A" style="width: 50px; text-align: center;">
+                </label>
+                <button id="renderCharBtn">Render Character</button>
             </div>
             
             <div class="actions">
@@ -58,7 +64,8 @@
             <h3>Instructions</h3>
             <ul>
                 <li><strong>Full Screen Mode:</strong> Display the entire Nokia 5110 screen (84x48 pixels)</li>
-                <li><strong>Custom Size Mode:</strong> Display a portion of the screen with custom dimensions (e.g., 8x6 for character design)</li>
+                <li><strong>Custom Size Mode:</strong> Display a portion of the screen with custom dimensions (e.g., 8x8 for character design)</li>
+                <li><strong>Auto-Render Character:</strong> Type a character (A-Z, 0-9) and click "Render Character" to automatically display it</li>
                 <li><strong>Click</strong> on any square to toggle it between white and black</li>
                 <li><strong>Clear All:</strong> Reset all pixels to white</li>
                 <li><strong>Export Font Data:</strong> Generate byte array data for use in Arduino/C++ code</li>
