@@ -247,15 +247,17 @@ function exportFontData() {
 function copyToClipboard() {
     const output = document.getElementById('outputData');
     if (output.value) {
-        output.select();
-        document.execCommand('copy');
-        
-        const btn = document.getElementById('copyBtn');
-        const originalText = btn.textContent;
-        btn.textContent = 'Copied!';
-        setTimeout(() => {
-            btn.textContent = originalText;
-        }, 2000);
+        navigator.clipboard.writeText(output.value).then(() => {
+            const btn = document.getElementById('copyBtn');
+            const originalText = btn.textContent;
+            btn.textContent = 'Copied!';
+            setTimeout(() => {
+                btn.textContent = originalText;
+            }, 2000);
+        }).catch(err => {
+            console.error('Failed to copy:', err);
+            alert('Failed to copy to clipboard. Please try selecting and copying manually.');
+        });
     } else {
         alert('Please export font data first!');
     }
