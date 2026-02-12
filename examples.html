@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nokia 5110 Font Generator - Example Usage</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        h1 { color: #333; }
+        h2 { color: #667eea; margin-top: 30px; }
+        pre {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            border-left: 4px solid #667eea;
+        }
+        code {
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+        .note {
+            background: #e8f4f8;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+            border-left: 4px solid #667eea;
+        }
+    </style>
+</head>
+<body>
+    <h1>Nokia 5110 Font Generator - Example Usage</h1>
+    
+    <div class="note">
+        <strong>Quick Start:</strong> Open <code>index.html</code> in your web browser to start creating fonts!
+    </div>
+
+    <h2>Creating a Simple Character</h2>
+    <ol>
+        <li>Open <code>index.html</code> in your browser</li>
+        <li>Select "Custom Size" mode</li>
+        <li>Set Width: 5, Height: 7 (common font size)</li>
+        <li>Click "Apply Size"</li>
+        <li>Click on squares to draw your character</li>
+        <li>Click "Export Font Data"</li>
+        <li>Copy the generated code</li>
+    </ol>
+
+    <h2>Arduino Example</h2>
+    <p>Here's how to use the generated font data in your Arduino sketch:</p>
+    
+    <pre><code>// Include the Nokia 5110 library
+#include &lt;Adafruit_GFX.h&gt;
+#include &lt;Adafruit_PCD8544.h&gt;
+
+// Pin configuration
+Adafruit_PCD8544 display = Adafruit_PCD8544(7, 6, 5, 4, 3);
+
+// Your custom character (generated from the font generator)
+const unsigned char myChar[7] = {
+  0x1F, 0x11, 0x11, 0x11, 0x1F, 0x00, 0x00
+};
+
+void setup() {
+  display.begin();
+  display.setContrast(50);
+  display.clearDisplay();
+  
+  // Draw your custom character
+  display.drawBitmap(0, 0, myChar, 5, 7, BLACK);
+  
+  display.display();
+}
+
+void loop() {
+  // Your code here
+}</code></pre>
+
+    <h2>Creating a Full Font Set</h2>
+    <p>To create a complete font (A-Z, 0-9):</p>
+    <ol>
+        <li>Design each character in custom size mode (e.g., 5x7)</li>
+        <li>Export each character's data</li>
+        <li>Combine all characters into a single array</li>
+    </ol>
+
+    <pre><code>// Complete font array (example with just a few characters)
+const unsigned char myFont[][7] = {
+  // 'A'
+  {0x1F, 0x11, 0x11, 0x11, 0x1F, 0x00, 0x00},
+  // 'B'
+  {0x1F, 0x15, 0x15, 0x15, 0x0A, 0x00, 0x00},
+  // Add more characters...
+};
+
+// Function to draw a character
+void drawChar(int x, int y, char c) {
+  int index = c - 'A'; // Assuming A-Z
+  if (index >= 0 && index < 26) {
+    display.drawBitmap(x, y, myFont[index], 5, 7, BLACK);
+  }
+}</code></pre>
+
+    <h2>Tips and Tricks</h2>
+    <ul>
+        <li><strong>Standard Font Size:</strong> 5x7 or 8x8 pixels work well for readable text</li>
+        <li><strong>Large Characters:</strong> Use 8x6 or larger for better visibility</li>
+        <li><strong>Full Screen Graphics:</strong> Use 84x48 mode for logos or images</li>
+        <li><strong>Spacing:</strong> Leave at least 1 pixel between characters for readability</li>
+        <li><strong>Testing:</strong> Test on actual hardware as screens may render differently</li>
+    </ul>
+
+    <h2>Common Font Sizes</h2>
+    <ul>
+        <li><strong>5x7:</strong> Standard small font</li>
+        <li><strong>6x8:</strong> Slightly larger, more readable</li>
+        <li><strong>8x8:</strong> Square pixels, good for icons</li>
+        <li><strong>8x12:</strong> Tall characters, very readable</li>
+    </ul>
+
+    <div class="note">
+        <strong>Note:</strong> The Nokia 5110 LCD uses a 84x48 pixel monochrome display. 
+        Each pixel is either on (black) or off (white). The display organizes pixels in pages 
+        of 8 vertical pixels, which is why heights divisible by 8 use a different export format.
+    </div>
+
+    <h2>Resources</h2>
+    <ul>
+        <li><a href="https://github.com/adafruit/Adafruit-PCD8544-Nokia-5110-LCD-library">Adafruit PCD8544 Library</a></li>
+        <li><a href="https://github.com/adafruit/Adafruit-GFX-Library">Adafruit GFX Library</a></li>
+    </ul>
+
+    <hr>
+    <p><a href="index.html">← Back to Font Generator</a></p>
+</body>
+</html>
