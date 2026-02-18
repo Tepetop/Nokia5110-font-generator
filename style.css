@@ -78,6 +78,56 @@ h1 {
     border-radius: 4px;
 }
 
+.custom-size textarea {
+    width: 100%;
+    margin-top: 6px;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9em;
+    resize: vertical;
+}
+
+.separation-controls {
+    display: grid;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.sep-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.sep-row label {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.sep-row input[type="number"] {
+    width: 70px;
+    margin-left: 0;
+}
+
+.sep-toggle {
+    min-width: 78px;
+    padding: 8px 12px;
+    margin: 0;
+    background: #8b95d8;
+}
+
+.sep-toggle.active {
+    background: #667eea;
+}
+
+.sep-toggle:hover {
+    background: #5568d3;
+}
+
 button {
     background: #667eea;
     color: white;

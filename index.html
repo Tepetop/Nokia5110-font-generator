@@ -33,12 +33,39 @@
                     Height: <input type="number" id="customHeight" value="8" min="1" max="48">
                 </label>
                 <button id="applyCustomSize">Apply Size</button>
+
+                <h3 style="margin-top: 15px;">Character Separation</h3>
+                <div class="separation-controls">
+                    <div class="sep-row">
+                        <button type="button" class="sep-toggle" data-side="top">Top</button>
+                        <label>px: <input type="number" id="sepTop" min="1" max="47" value="1" disabled></label>
+                    </div>
+                    <div class="sep-row">
+                        <button type="button" class="sep-toggle active" data-side="bottom">Bottom</button>
+                        <label>px: <input type="number" id="sepBottom" min="1" max="47" value="1"></label>
+                    </div>
+                    <div class="sep-row">
+                        <button type="button" class="sep-toggle" data-side="left">Left</button>
+                        <label>px: <input type="number" id="sepLeft" min="1" max="83" value="1" disabled></label>
+                    </div>
+                    <div class="sep-row">
+                        <button type="button" class="sep-toggle active" data-side="right">Right</button>
+                        <label>px: <input type="number" id="sepRight" min="1" max="83" value="1"></label>
+                    </div>
+                </div>
                 
                 <h3 style="margin-top: 15px;">Auto-Render Character</h3>
                 <label>
                     Character: <input type="text" id="charInput" maxlength="1" placeholder="a" style="width: 50px; text-align: center;">
                 </label>
                 <button id="renderCharBtn">Render Character</button>
+
+                <h3 style="margin-top: 15px;">Render from HEX</h3>
+                <label>
+                    HEX bytes:
+                    <textarea id="hexInput" rows="4" placeholder="Example: 0x7E, 0x11, 0x11, 0x11, 0x7E, 0x00&#10;or paste exported array with comments"></textarea>
+                </label>
+                <button id="renderHexBtn">Render HEX</button>
             </div>
             
             <div class="actions">
@@ -65,7 +92,9 @@
             <ul>
                 <li><strong>Full Screen Mode:</strong> Display the entire Nokia 5110 screen (84x48 pixels)</li>
                 <li><strong>Custom Size Mode:</strong> Display a portion of the screen with custom dimensions (default 6x8 for PCD8544 character design)</li>
+                <li><strong>Spacing Border:</strong> Configure top/bottom/left/right separation; selected border zones are pink, always empty, and non-editable</li>
                 <li><strong>Auto-Render Character:</strong> Type a character (A-Z, a-z, 0-9, symbols) and click "Render Character" to automatically display it</li>
+                <li><strong>Render from HEX:</strong> Paste HEX bytes (e.g. <code>0x3E, 0x51, ...</code>) to display a character from byte data; grid size is auto-fitted</li>
                 <li><strong>Click</strong> on any square to toggle it between white and black</li>
                 <li><strong>Clear All:</strong> Reset all pixels to white</li>
                 <li><strong>Export Font Data:</strong> Generate byte array data for use in Arduino/C++ code</li>

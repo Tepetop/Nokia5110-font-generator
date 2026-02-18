@@ -1,7 +1,8 @@
 // Nokia 5110 LCD specifications
 const FULL_WIDTH = 84;
 const FULL_HEIGHT = 48;
-const PIXEL_SIZE = 16; // Size of each pixel square in the canvas
+const PIXEL_SIZE = 20; // Size of each pixel square in the canvas
+const PADDING_COLOR = '#ffd6e7';
 
 
 // 6x8 font data from Nokia 5110 / PCD8544
@@ -210,15 +211,23 @@ let pixelData = [];
 let canvas, ctx;
 let isDragging = false;
 let lastToggleState = null;
+let separationConfig = {
+    top: { enabled: false, size: 1 },
+    bottom: { enabled: true, size: 1 },
+    left: { enabled: false, size: 1 },
+    right: { enabled: true, size: 1 }
+};
 
 // Initialize the application
 document.addEventListener('DOMContentLoaded', () => {
     canvas = document.getElementById('pixelCanvas');
     ctx = canvas.getContext('2d');
     
+    syncSeparationControls();
     initializePixelData();
     setupCanvas();
     drawGrid();
+    updateDimensionsInfo();
     setupEventListeners();
 });
 
@@ -235,17 +244,131 @@ function setupCanvas() {
     canvas.height = currentHeight * PIXEL_SIZE;
 }
 
+function getSeparationOffsets() {
+    return {
+        top: separationConfig.top.enabled ? separationConfig.top.size : 0,
+        bottom: separationConfig.bottom.enabled ? separationConfig.bottom.size : 0,
+        left: separationConfig.left.enabled ? separationConfig.left.size : 0,
+        right: separationConfig.right.enabled ? separationConfig.right.size : 0
+    };
+}
+
+function getDrawableBounds() {
+    const sep = getSeparationOffsets();
+    return {
+        left: sep.left,
+        top: sep.top,
+        width: currentWidth - sep.left - sep.right,
+        height: currentHeight - sep.top - sep.bottom
+    };
+}
+
+function getDrawableWidth() {
+    return Math.max(0, getDrawableBounds().width);
+}
+
+function getDrawableHeight() {
+    return Math.max(0, getDrawableBounds().height);
+}
+
+function isPaddingCell(x, y) {
+    const drawable = getDrawableBounds();
+    return x < drawable.left || x >= (drawable.left + drawable.width) || y < drawable.top || y >= (drawable.top + drawable.height);
+}
+
+function enforcePaddingBorder() {
+    if (currentWidth < 1 || currentHeight < 1) {
+        return;
+    }
+
+    for (let y = 0; y < currentHeight; y++) {
+        for (let x = 0; x < currentWidth; x++) {
+            if (isPaddingCell(x, y)) {
+                pixelData[y][x] = false;
+            }
+        }
+    }
+}
+
+function hasValidDrawableArea(width, height) {
+    const sep = getSeparationOffsets();
+    return (width - sep.left - sep.right) >= 1 && (height - sep.top - sep.bottom) >= 1;
+}
+
+function getMinDimensionsForSeparation() {
+    const sep = getSeparationOffsets();
+    return {
+        width: sep.left + sep.right + 1,
+        height: sep.top + sep.bottom + 1
+    };
+}
+
+function applySeparationFromControls() {
+    const proposed = {
+        top: {
+            enabled: document.querySelector('.sep-toggle[data-side="top"]').classList.contains('active'),
+            size: Math.max(1, parseInt(document.getElementById('sepTop').value, 10) || 1)
+        },
+        bottom: {
+            enabled: document.querySelector('.sep-toggle[data-side="bottom"]').classList.contains('active'),
+            size: Math.max(1, parseInt(document.getElementById('sepBottom').value, 10) || 1)
+        },
+        left: {
+            enabled: document.querySelector('.sep-toggle[data-side="left"]').classList.contains('active'),
+            size: Math.max(1, parseInt(document.getElementById('sepLeft').value, 10) || 1)
+        },
+        right: {
+            enabled: document.querySelector('.sep-toggle[data-side="right"]').classList.contains('active'),
+            size: Math.max(1, parseInt(document.getElementById('sepRight').value, 10) || 1)
+        }
+    };
+
+    const tempCurrent = separationConfig;
+    separationConfig = proposed;
+
+    const minDims = getMinDimensionsForSeparation();
+    if (minDims.width > FULL_WIDTH || minDims.height > FULL_HEIGHT) {
+        separationConfig = tempCurrent;
+        alert('Selected separation is too large for Nokia 5110 display limits.');
+        syncSeparationControls();
+        return;
+    }
+
+    if (!hasValidDrawableArea(currentWidth, currentHeight)) {
+        const newWidth = Math.max(currentWidth, minDims.width);
+        const newHeight = Math.max(currentHeight, minDims.height);
+        setCustomSize(newWidth, newHeight);
+    } else {
+        drawGrid();
+        updateDimensionsInfo();
+    }
+}
+
+function syncSeparationControls() {
+    ['top', 'bottom', 'left', 'right'].forEach((side) => {
+        const toggle = document.querySelector(`.sep-toggle[data-side="${side}"]`);
+        const input = document.getElementById(`sep${side.charAt(0).toUpperCase() + side.slice(1)}`);
+        const enabled = separationConfig[side].enabled;
+
+        toggle.classList.toggle('active', enabled);
+        input.disabled = !enabled;
+        input.value = separationConfig[side].size;
+    });
+}
+
 // Draw the pixel grid
 function drawGrid() {
+    enforcePaddingBorder();
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
     for (let y = 0; y < currentHeight; y++) {
         for (let x = 0; x < currentWidth; x++) {
             const pixelX = x * PIXEL_SIZE;
             const pixelY = y * PIXEL_SIZE;
+            const paddingCell = isPaddingCell(x, y);
             
             // Fill pixel
-            ctx.fillStyle = pixelData[y][x] ? '#000000' : '#ffffff';
+            ctx.fillStyle = paddingCell ? PADDING_COLOR : (pixelData[y][x] ? '#000000' : '#ffffff');
             ctx.fillRect(pixelX, pixelY, PIXEL_SIZE, PIXEL_SIZE);
             
             // Draw grid lines
@@ -258,7 +381,7 @@ function drawGrid() {
 
 // Toggle pixel at given position
 function togglePixel(x, y, forceState = null) {
-    if (x >= 0 && x < currentWidth && y >= 0 && y < currentHeight) {
+    if (x >= 0 && x < currentWidth && y >= 0 && y < currentHeight && !isPaddingCell(x, y)) {
         if (forceState !== null) {
             pixelData[y][x] = forceState;
         } else {
@@ -304,8 +427,14 @@ function setupEventListeners() {
     
     // Canvas mouse events
     canvas.addEventListener('mousedown', (e) => {
-        isDragging = true;
         const { x, y } = getPixelCoords(e);
+        if (x < 0 || x >= currentWidth || y < 0 || y >= currentHeight || isPaddingCell(x, y)) {
+            isDragging = false;
+            lastToggleState = null;
+            return;
+        }
+
+        isDragging = true;
         lastToggleState = !pixelData[y][x];
         togglePixel(x, y, lastToggleState);
     });
@@ -338,6 +467,30 @@ function setupEventListeners() {
     
     // Render character button
     document.getElementById('renderCharBtn').addEventListener('click', renderCharacter);
+
+    // Render HEX button
+    document.getElementById('renderHexBtn').addEventListener('click', renderFromHex);
+
+    // Separation controls
+    document.querySelectorAll('.sep-toggle').forEach((toggle) => {
+        toggle.addEventListener('click', () => {
+            const side = toggle.dataset.side;
+            const input = document.getElementById(`sep${side.charAt(0).toUpperCase() + side.slice(1)}`);
+            toggle.classList.toggle('active');
+            input.disabled = !toggle.classList.contains('active');
+            applySeparationFromControls();
+        });
+    });
+
+    ['Top', 'Bottom', 'Left', 'Right'].forEach((side) => {
+        const input = document.getElementById(`sep${side}`);
+        input.addEventListener('change', () => {
+            if (parseInt(input.value, 10) < 1 || Number.isNaN(parseInt(input.value, 10))) {
+                input.value = 1;
+            }
+            applySeparationFromControls();
+        });
+    });
 }
 
 // Set full screen mode
@@ -356,6 +509,12 @@ function setCustomSize(width, height) {
         alert(`Width must be between 1 and ${FULL_WIDTH}, height must be between 1 and ${FULL_HEIGHT}`);
         return;
     }
+
+    if (!hasValidDrawableArea(width, height)) {
+        const minDims = getMinDimensionsForSeparation();
+        alert(`Size too small for current separation. Minimum is ${minDims.width}x${minDims.height}.`);
+        return;
+    }
     
     currentWidth = width;
     currentHeight = height;
@@ -363,6 +522,23 @@ function setCustomSize(width, height) {
     setupCanvas();
     drawGrid();
     updateDimensionsInfo();
+}
+
+// Force UI into custom mode and set size inputs to current dimensions
+function ensureCustomModeSelected() {
+    const customModeRadio = document.querySelector('input[name="mode"][value="custom"]');
+    const customSizeInputs = document.getElementById('customSizeInputs');
+
+    if (customModeRadio) {
+        customModeRadio.checked = true;
+    }
+
+    if (customSizeInputs) {
+        customSizeInputs.style.display = 'block';
+    }
+
+    document.getElementById('customWidth').value = currentWidth;
+    document.getElementById('customHeight').value = currentHeight;
 }
 
 // Clear all pixels
@@ -373,13 +549,15 @@ function clearAll() {
 
 // Update dimensions info display
 function updateDimensionsInfo() {
+    const drawable = getDrawableBounds();
     document.getElementById('dimensionsInfo').textContent = 
-        `Dimensions: ${currentWidth}x${currentHeight} pixels`;
+        `Dimensions: ${currentWidth}x${currentHeight} pixels (drawable ${drawable.width}x${drawable.height})`;
 }
 
 // Export font data as byte array
 function exportFontData() {
     const output = document.getElementById('outputData');
+    enforcePaddingBorder();
     
     // Convert pixel data to byte array
     // PCD8544 is vertically oriented byte addressing.
@@ -490,14 +668,22 @@ function renderCharacter() {
     // Source dimensions: 6x8
     const srcWidth = 6;
     const srcHeight = 8;
+    const drawable = getDrawableBounds();
+    const targetWidth = drawable.width;
+    const targetHeight = drawable.height;
+
+    if (targetWidth < 1 || targetHeight < 1) {
+        alert('Drawable area is too small. Reduce separation or increase custom dimensions.');
+        return;
+    }
     
-    for (let y = 0; y < currentHeight; y++) {
+    for (let y = 0; y < targetHeight; y++) {
         // Map target Y to source Y
-        const srcY = Math.floor((y * srcHeight) / currentHeight);
+        const srcY = Math.floor((y * srcHeight) / targetHeight);
         
-        for (let x = 0; x < currentWidth; x++) {
+        for (let x = 0; x < targetWidth; x++) {
             // Map target X to source X
-            const srcX = Math.floor((x * srcWidth) / currentWidth);
+            const srcX = Math.floor((x * srcWidth) / targetWidth);
             
             // Get pixel state from source
             // fontData is array of 6 bytes (columns)
@@ -505,9 +691,177 @@ function renderCharacter() {
             const colByte = fontData[srcX];
             const bitSet = (colByte & (1 << srcY)) !== 0;
             
-            pixelData[y][x] = bitSet;
+            pixelData[drawable.top + y][drawable.left + x] = bitSet;
         }
     }
     
+    drawGrid();
+}
+
+// Parse HEX bytes from text input (supports 0xNN and NN formats)
+function parseHexBytes(input) {
+    if (!input || !input.trim()) {
+        return [];
+    }
+
+    const has0xTokens = /0x[0-9a-fA-F]{1,2}/.test(input);
+    const tokenRegex = has0xTokens ? /0x([0-9a-fA-F]{1,2})/g : /\b([0-9a-fA-F]{1,2})\b/g;
+    const bytes = [];
+    let match;
+
+    while ((match = tokenRegex.exec(input)) !== null) {
+        const value = parseInt(match[1], 16);
+        if (!Number.isNaN(value) && value >= 0 && value <= 0xFF) {
+            bytes.push(value);
+        }
+    }
+
+    return bytes;
+}
+
+// Infer source dimensions from input. If not explicitly provided, fallback to 1 page (height=8).
+function inferSourceDimensions(input, bytes) {
+    const explicitDimensions = input.match(/(\d+)\s*x\s*(\d+)\s*pixels/i);
+    if (explicitDimensions) {
+        const width = parseInt(explicitDimensions[1], 10);
+        const height = parseInt(explicitDimensions[2], 10);
+        const expectedBytes = width * Math.ceil(height / 8);
+
+        if (width > 0 && height > 0 && expectedBytes === bytes.length) {
+            return { width, height };
+        }
+    }
+
+    // Try infer from per-line bytes (works with exported multiline arrays)
+    const lineCounts = input
+        .split(/\r?\n/)
+        .map((line) => parseHexBytes(line).length)
+        .filter((count) => count > 0);
+
+    if (lineCounts.length > 1) {
+        const first = lineCounts[0];
+        const uniform = lineCounts.every((count) => count === first);
+        const pages = lineCounts.length;
+
+        if (uniform && first > 0 && first <= FULL_WIDTH && first * pages === bytes.length) {
+            return { width: first, height: pages * 8 };
+        }
+    }
+
+    return { width: bytes.length, height: 8 };
+}
+
+// Convert byte array (PCD8544 vertical pages) to boolean matrix [y][x]
+function decodeBytesToMatrix(bytes, width, height) {
+    const pages = Math.ceil(height / 8);
+    const matrix = Array(height).fill(null).map(() => Array(width).fill(false));
+
+    for (let page = 0; page < pages; page++) {
+        for (let col = 0; col < width; col++) {
+            const byteIndex = page * width + col;
+            const value = bytes[byteIndex] || 0;
+
+            for (let bit = 0; bit < 8; bit++) {
+                const row = page * 8 + bit;
+                if (row < height) {
+                    matrix[row][col] = (value & (1 << bit)) !== 0;
+                }
+            }
+        }
+    }
+
+    return matrix;
+}
+
+// Trim empty margins and return best-fit glyph matrix.
+function trimMatrix(matrix) {
+    const height = matrix.length;
+    const width = matrix[0]?.length || 0;
+
+    let minX = width;
+    let minY = height;
+    let maxX = -1;
+    let maxY = -1;
+
+    for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+            if (matrix[y][x]) {
+                minX = Math.min(minX, x);
+                minY = Math.min(minY, y);
+                maxX = Math.max(maxX, x);
+                maxY = Math.max(maxY, y);
+            }
+        }
+    }
+
+    if (maxX === -1 || maxY === -1) {
+        return {
+            matrix: Array(8).fill(null).map(() => Array(Math.max(1, width)).fill(false)),
+            width: Math.max(1, width),
+            height: 8
+        };
+    }
+
+    const trimmedWidth = maxX - minX + 1;
+    const trimmedHeight = maxY - minY + 1;
+    const trimmed = Array(trimmedHeight).fill(null).map(() => Array(trimmedWidth).fill(false));
+
+    for (let y = 0; y < trimmedHeight; y++) {
+        for (let x = 0; x < trimmedWidth; x++) {
+            trimmed[y][x] = matrix[minY + y][minX + x];
+        }
+    }
+
+    return { matrix: trimmed, width: trimmedWidth, height: trimmedHeight };
+}
+
+// Render glyph from HEX input and auto-fit canvas size
+function renderFromHex() {
+    const input = document.getElementById('hexInput').value;
+    const bytes = parseHexBytes(input);
+
+    if (!bytes.length) {
+        alert('Please provide HEX data (e.g. 0x3E, 0x51, 0x49, 0x45, 0x3E).');
+        return;
+    }
+
+    if (bytes.length > FULL_WIDTH * Math.ceil(FULL_HEIGHT / 8)) {
+        alert('HEX data is too large for Nokia 5110 limits (84x48).');
+        return;
+    }
+
+    const sourceDimensions = inferSourceDimensions(input, bytes);
+
+    if (sourceDimensions.width > FULL_WIDTH || sourceDimensions.height > FULL_HEIGHT) {
+        alert(`Inferred dimensions ${sourceDimensions.width}x${sourceDimensions.height} exceed Nokia 5110 limits.`);
+        return;
+    }
+
+    const decodedMatrix = decodeBytesToMatrix(bytes, sourceDimensions.width, sourceDimensions.height);
+    const fitted = trimMatrix(decodedMatrix);
+
+    const sep = getSeparationOffsets();
+    const minimumWidth = sep.left + sep.right + 1;
+    const minimumHeight = sep.top + sep.bottom + 1;
+
+    const targetWidth = Math.min(FULL_WIDTH, Math.max(minimumWidth, fitted.width + sep.left + sep.right));
+    const targetHeight = Math.min(FULL_HEIGHT, Math.max(minimumHeight, fitted.height + sep.top + sep.bottom));
+
+    if (!hasValidDrawableArea(targetWidth, targetHeight)) {
+        alert('Current separation leaves no drawable area for this HEX data.');
+        return;
+    }
+
+    ensureCustomModeSelected();
+    setCustomSize(targetWidth, targetHeight);
+
+    const drawable = getDrawableBounds();
+
+    for (let y = 0; y < Math.min(fitted.height, drawable.height); y++) {
+        for (let x = 0; x < Math.min(fitted.width, drawable.width); x++) {
+            pixelData[drawable.top + y][drawable.left + x] = fitted.matrix[y][x];
+        }
+    }
+
     drawGrid();
 }
