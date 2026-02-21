@@ -160,7 +160,7 @@ button:active {
     overflow: auto;
 }
 
-.matrix-actions {
+.canvas-container .actions {
     display: flex;
     flex-direction: column;
 }
